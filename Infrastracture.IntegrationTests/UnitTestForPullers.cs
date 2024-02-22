@@ -41,5 +41,19 @@ namespace Infrastracture.IntegrationTests
             Assert.Equal(3, 
                 schedule.Days.First(d => d.DayOfWeek == DayOfWeek.Thursday).Pairs.Count());
         }
+
+        [Fact]
+        public void ShouldReturnAllSchedulesForStudentsBuildingB()
+        {
+            IScheduleParserFactory factory = new HtmlScheduleParserFactory(_configuration);
+            var puller = new SchedulePuller(factory);
+
+            puller.SetParser(factory =>
+                factory.CreateStudentScheduleParserBuildingB());
+
+            var schedule = puller.GetScheduleWeekForAll();
+
+            Assert.Equal(17, schedule.StaffSchedules.Count());
+        }
     }
 }
