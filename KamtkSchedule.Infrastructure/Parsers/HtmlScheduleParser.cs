@@ -2,6 +2,8 @@
 using KamtkSchedule.Application.Common.Interfaces;
 using KamtkSchedule.Application.Exceptions;
 using KamtkSchedule.Domain.Entities;
+using KamtkSchedule.Domain.Enums;
+
 using System.Globalization;
 using System.Net;
 
@@ -9,8 +11,11 @@ namespace KamtkSchedule.Infrastructure.Parsers
 {
     public abstract class HtmlScheduleParser : IScheduleParser
     {
-        protected readonly HtmlNodeCollection _mainNodeCollection;
+        protected readonly HtmlNodeCollection MainNodeCollection;
         protected const int DayOfWeekCount = 7;
+        protected CollegeBuilding Building;
+        protected StaffRole Role;
+        protected string ScheduleFor;
 
         /// <summary>
         /// 
@@ -18,12 +23,14 @@ namespace KamtkSchedule.Infrastructure.Parsers
         /// <exception cref="UriFormatException"></exception>
         /// <exception cref="WebException"></exception>
         /// <exception cref="InvalidHtmlResourceException"></exception>
-        internal HtmlScheduleParser(string url)
+        internal HtmlScheduleParser(string url, CollegeBuilding building)
         {
+            this.Building = building;
+
             HtmlWeb web = new();
             var document = web.Load(url);
 
-            _mainNodeCollection = document.DocumentNode.SelectNodes("//table/tr") ??
+            MainNodeCollection = document.DocumentNode.SelectNodes("//table/tr") ??
                 throw new InvalidHtmlResourceException("Provide a link to the " +
                     "college schedule website");
         }
@@ -32,9 +39,10 @@ namespace KamtkSchedule.Infrastructure.Parsers
         /// 
         /// </summary>
         /// <param name="mainNodeCollection"></param>
-        internal HtmlScheduleParser(HtmlNodeCollection mainNodeCollection)
+        internal HtmlScheduleParser(HtmlNodeCollection mainNodeCollection, CollegeBuilding building)
         {
-            _mainNodeCollection = mainNodeCollection;
+            this.Building = building;
+            this.MainNodeCollection = mainNodeCollection;
         }
 
         /// <summary>
@@ -47,7 +55,7 @@ namespace KamtkSchedule.Infrastructure.Parsers
         {
             try
             {
-                var tableRow = _mainNodeCollection.First();
+                var tableRow = MainNodeCollection.First();
                 var tableColumns = tableRow.SelectNodes("./td");
 
                 var tableColumn = tableColumns.First(td =>
@@ -55,6 +63,8 @@ namespace KamtkSchedule.Infrastructure.Parsers
                     string htmlContent = td.SelectSingleNode("./span").InnerText;
                     return IsContainsSearchName(htmlContent, searchName);
                 });
+
+                ScheduleFor = RemoveExtraCharsFromSearchName(tableColumn.SelectSingleNode("./span").InnerText);
 
                 return tableColumns.GetNodeIndex(tableColumn);
             }
@@ -92,7 +102,7 @@ namespace KamtkSchedule.Infrastructure.Parsers
             {
                 int[] startDayIndexes = new int[DayOfWeekCount];
 
-                var startDayNodes = _mainNodeCollection.Where(tr =>
+                var startDayNodes = MainNodeCollection.Where(tr =>
                 {
                     var tableColumn = tr.SelectNodes("./td").ElementAt(searchIndex);
                     string htmlContent = tableColumn.SelectSingleNode("./span").InnerText;
@@ -101,7 +111,7 @@ namespace KamtkSchedule.Infrastructure.Parsers
 
                 for (int i = 0; i < startDayNodes.Count(); i++)
                 {
-                    startDayIndexes[i] = _mainNodeCollection
+                    startDayIndexes[i] = MainNodeCollection
                         .GetNodeIndex(startDayNodes.ElementAt(i));
                 }
 
@@ -132,18 +142,14 @@ namespace KamtkSchedule.Infrastructure.Parsers
         /// <param name="options"></param>
         /// <returns></returns>
         /// <exception cref="InvalidHtmlResourceException"></exception>
-        protected virtual Schedule ParseScheduleFromHtml(
+        protected virtual ScheduleDay ParseScheduleDayFromHtml(
             ParseScheduleFromHtmlOptions options)
         {
             List<Pair> pairs = [];
 
             try
             {
-                // Получить название группы
-                var row = _mainNodeCollection.ElementAt(options.CurrentDayBeginIndex);
-                var tableColumn = row.SelectNodes("./td")[options.SearchIndex];
-                string innerText = tableColumn.SelectSingleNode("./span").InnerText;
-                string searchName = RemoveExtraCharsFromSearchName(innerText);
+                var row = MainNodeCollection.ElementAt(options.CurrentDayBeginIndex);
 
                 // Получить дату
                 var td = row.SelectNodes("./td")[0];
@@ -155,7 +161,7 @@ namespace KamtkSchedule.Infrastructure.Parsers
                 int pairNumber = 1;
                 for (int i = options.CurrentDayBeginIndex + 1; i < options.NextDayBeginIndex; i++)
                 {
-                    var currentRow = _mainNodeCollection.ElementAt(i);
+                    var currentRow = MainNodeCollection.ElementAt(i);
                     var tColumn = currentRow.SelectNodes("./td")[options.SearchIndex];
                     string disciplineText = tColumn.SelectSingleNode("./span")
                         .InnerText.Replace("&nbsp;", " ").Trim();
@@ -166,7 +172,7 @@ namespace KamtkSchedule.Infrastructure.Parsers
                         continue;
                     }
 
-                    var nextRow = _mainNodeCollection.ElementAt(i + 1);
+                    var nextRow = MainNodeCollection.ElementAt(i + 1);
                     var tc = nextRow.SelectNodes("./td")[options.SearchIndex];
                     string teacherText = tc.SelectSingleNode("./span").InnerText
                         .Replace("&nbsp;", " ").Trim();
@@ -187,11 +193,10 @@ namespace KamtkSchedule.Infrastructure.Parsers
                     i++;
                 }
 
-                return new Schedule
+                return new ScheduleDay
                 {
                     DayOfWeek = options.DayOfWeek,
                     Pairs = pairs,
-                    For = searchName,
                     Date = date
                 };
             }
@@ -211,7 +216,7 @@ namespace KamtkSchedule.Infrastructure.Parsers
         {
             try
             {
-                var tableRow = _mainNodeCollection.First();
+                var tableRow = MainNodeCollection.First();
                 List<string> groups = [];
 
                 var columns = tableRow.SelectNodes("./td");
@@ -238,7 +243,7 @@ namespace KamtkSchedule.Infrastructure.Parsers
                     "of the target model");
             }
         }
-
+        
         /// <summary>
         /// 
         /// </summary>
@@ -246,11 +251,18 @@ namespace KamtkSchedule.Infrastructure.Parsers
         /// <returns></returns>
         /// <exception cref="InvalidHtmlResourceException"></exception>
         /// <exception cref="ColumnIndexNotFoundException"></exception>
-        public virtual IEnumerable<Schedule> GetSchedulesFor(string searchName)
+        public virtual ScheduleStaffWeek GetScheduleStaffWeekFor(string searchName)
         {
             int searchIndex = FindColumnIndexFor(searchName);
 
-            List<Schedule> schedules = [];
+            ScheduleStaffWeek scheduleStaffWeek = new()
+            {
+                Building = Building,
+                Role = Role,
+                For = ScheduleFor,
+            };
+
+            List<ScheduleDay> scheduleDays = [];
 
             int[] startDayIndexes = FindAllIndexesBeginDay(searchName,
                 searchIndex);
@@ -258,7 +270,7 @@ namespace KamtkSchedule.Infrastructure.Parsers
             for (int i = 0; i < startDayIndexes.Length; i++)
             {
                 int currentIndex = startDayIndexes[i];
-                int nextIndex = _mainNodeCollection.Count;
+                int nextIndex = MainNodeCollection.Count;
                 if (i < startDayIndexes.Length - 1)
                 {
                     nextIndex = startDayIndexes[i + 1];
@@ -276,7 +288,7 @@ namespace KamtkSchedule.Infrastructure.Parsers
                     _ => throw new InvalidHtmlResourceException(),
                 };
 
-                schedules.Add(ParseScheduleFromHtml(new ParseScheduleFromHtmlOptions
+                scheduleDays.Add(ParseScheduleDayFromHtml(new ParseScheduleFromHtmlOptions
                 {
                     DayOfWeek = dayOfWeek,
                     CurrentDayBeginIndex = currentIndex,
@@ -285,7 +297,11 @@ namespace KamtkSchedule.Infrastructure.Parsers
                 }));
             }
 
-            return schedules;
+            scheduleStaffWeek.Days = scheduleDays;
+            scheduleStaffWeek.ScheduleStartDay = scheduleDays.First().Date;
+            scheduleStaffWeek.ScheduleEndDay = scheduleDays.Last().Date;
+
+            return scheduleStaffWeek;
         }
 
         /// <summary>
@@ -294,19 +310,22 @@ namespace KamtkSchedule.Infrastructure.Parsers
         /// <returns></returns>
         /// <exception cref="InvalidHtmlResourceException"></exception>
         /// <exception cref="ColumnIndexNotFoundException"></exception>
-        public virtual IEnumerable<Schedule> GetSchedulesForAll()
+        public virtual ScheduleWeek GetScheduleWeekForAll()
         {
-            List<Schedule> schedules = [];
+            ScheduleWeek scheduleWeek = new();
+
+            List<ScheduleStaffWeek> staffSchedules = [];
 
             IEnumerable<string> groups = GetAllNames();
 
             foreach (string group in groups)
             {
-                var schedule = GetSchedulesFor(group);
-                schedules.AddRange(schedule);
+                var staffSchedule = GetScheduleStaffWeekFor(group);
+                staffSchedules.Add(staffSchedule);
             }
+            scheduleWeek.StaffSchedules = staffSchedules;
 
-            return schedules;
+            return scheduleWeek;
         }
     
         protected record ParseScheduleFromHtmlOptions

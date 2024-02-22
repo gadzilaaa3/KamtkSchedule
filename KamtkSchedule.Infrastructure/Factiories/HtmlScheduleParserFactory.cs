@@ -1,10 +1,11 @@
 ﻿using KamtkSchedule.Application.Common.Interfaces;
+using KamtkSchedule.Domain.Enums;
 using KamtkSchedule.Infrastructure.Parsers;
 using Microsoft.Extensions.Configuration;
 
 namespace KamtkSchedule.Infrastructure.Factiories
 {
-    public class HtmlScheduleParserFactory : ScheduleParserFactory
+    public class HtmlScheduleParserFactory : IScheduleParserFactory
     {
         private readonly IConfiguration _configuration;
         public HtmlScheduleParserFactory(IConfiguration configuration) 
@@ -12,45 +13,45 @@ namespace KamtkSchedule.Infrastructure.Factiories
             _configuration = configuration;
         }
 
-        public override IScheduleParser CreateDefaultScheduleParser()
+        public IScheduleParser CreateDefaultScheduleParser()
         {
             return CreateStudentScheduleParserBuildingA();
         }
 
-        public override IScheduleParser CreateStudentScheduleParserBuildingA()
+        public IScheduleParser CreateStudentScheduleParserBuildingA()
         {
             string url = _configuration
                 .GetRequiredSection("ScheduleLinks")
                 .GetRequiredSection("Students")["BuildingA"] ?? "";
 
-            return new HtmlStudentScheduleParser(url);
+            return new HtmlStudentScheduleParser(url, CollegeBuilding.A);
         }
 
-        public override IScheduleParser CreateStudentScheduleParserBuildingB()
+        public IScheduleParser CreateStudentScheduleParserBuildingB()
         {
             string url = _configuration
                 .GetRequiredSection("ScheduleLinks")
                 .GetRequiredSection("Students")["BuildingB"] ?? "";
 
-            return new HtmlStudentScheduleParser(url);
+            return new HtmlStudentScheduleParser(url, CollegeBuilding.B);
         }
 
-        public override IScheduleParser CreateTeacherScheduleParserBuildingA()
+        public IScheduleParser CreateTeacherScheduleParserBuildingA()
         {
             string url = _configuration
                 .GetRequiredSection("ScheduleLinks")
                 .GetRequiredSection("Teachers")["BuildingA"] ?? "";
 
-            return new HtmlTeacherScheduleParser(url);
+            return new HtmlTeacherScheduleParser(url, CollegeBuilding.A);
         }
 
-        public override IScheduleParser CreateTeacherScheduleParserBuildingB()
+        public IScheduleParser CreateTeacherScheduleParserBuildingB()
         {
             string url = _configuration
                 .GetRequiredSection("ScheduleLinks")
                 .GetRequiredSection("Teachers")["BuildingB"] ?? "";
 
-            return new HtmlTeacherScheduleParser(url);
+            return new HtmlTeacherScheduleParser(url, CollegeBuilding.B);
         }
     }
 }

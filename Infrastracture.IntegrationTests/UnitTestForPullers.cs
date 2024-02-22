@@ -1,4 +1,5 @@
-﻿using KamtkSchedule.Infrastructure.Factiories;
+﻿using KamtkSchedule.Application.Common.Interfaces;
+using KamtkSchedule.Infrastructure.Factiories;
 using KamtkSchedule.Infrastructure.Pullers;
 using Microsoft.Extensions.Configuration;
 
@@ -16,9 +17,9 @@ namespace Infrastracture.IntegrationTests
         }
 
         [Fact]
-        public void Test1()
+        public void TestSetParserMethodOfSchedulePuller()
         {
-            ScheduleParserFactory factory = new HtmlScheduleParserFactory(_configuration);
+            IScheduleParserFactory factory = new HtmlScheduleParserFactory(_configuration);
             var puller = new SchedulePuller(factory);
 
             puller.SetParser(factory =>
@@ -26,20 +27,19 @@ namespace Infrastracture.IntegrationTests
                 return factory.CreateTeacherScheduleParserBuildingA();
             });
 
-            var schedules = puller.GetSchedulesFor("Белякова");
+            var schedule = puller.GetScheduleStaffWeekFor("Белякова");
 
-            Assert.Equal(7, schedules.Count());
+            Assert.Equal(7, schedule.Days.Count());
 
             puller.SetParser(factory =>
             {
                 return factory.CreateStudentScheduleParserBuildingA();
             });
 
-            schedules = puller.GetSchedulesFor("ИП-409");
+            schedule = puller.GetScheduleStaffWeekFor("ИП-409");
 
-            Assert.Equal(4, 
-                schedules.First(s => s.DayOfWeek == DayOfWeek.Wednesday)
-                .Pairs.Count());
+            Assert.Equal(3, 
+                schedule.Days.First(d => d.DayOfWeek == DayOfWeek.Thursday).Pairs.Count());
         }
     }
 }

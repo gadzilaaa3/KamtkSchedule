@@ -1,5 +1,7 @@
 ﻿using HtmlAgilityPack;
 using KamtkSchedule.Application.Exceptions;
+using KamtkSchedule.Domain.Enums;
+
 using System.Net;
 
 namespace KamtkSchedule.Infrastructure.Parsers
@@ -13,9 +15,15 @@ namespace KamtkSchedule.Infrastructure.Parsers
         /// <exception cref="UriFormatException"></exception>
         /// <exception cref="WebException"></exception>
         /// <exception cref="InvalidHtmlResourceException"></exception>
-        public HtmlStudentScheduleParser(string url) : base(url) { }
+        public HtmlStudentScheduleParser(string url, CollegeBuilding building) : base(url, building) {
+            Role = StaffRole.Student;
+        }
 
-        public HtmlStudentScheduleParser(HtmlNodeCollection mainNodeCollection) 
-            : base(mainNodeCollection) { }
+        public HtmlStudentScheduleParser(HtmlNodeCollection mainNodeCollection, 
+            CollegeBuilding building) 
+            : base(mainNodeCollection, building) 
+        {
+            Role = StaffRole.Student;
+        }
     }
 }

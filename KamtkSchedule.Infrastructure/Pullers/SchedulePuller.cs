@@ -1,31 +1,30 @@
 ﻿using KamtkSchedule.Application.Common.Interfaces;
 using KamtkSchedule.Domain.Entities;
-using KamtkSchedule.Infrastructure.Factiories;
 
 namespace KamtkSchedule.Infrastructure.Pullers
 {
     public class SchedulePuller : ISchedulePuller
     {
         private IScheduleParser _parser;
-        private readonly ScheduleParserFactory _factory;
+        private readonly IScheduleParserFactory _factory;
 
-        public SchedulePuller(ScheduleParserFactory factory)
+        public SchedulePuller(IScheduleParserFactory factory)
         {
             _factory = factory;
             _parser = _factory.CreateDefaultScheduleParser();
         }
 
-        public IEnumerable<Schedule> GetSchedulesFor(string searchName)
+        public ScheduleStaffWeek GetScheduleStaffWeekFor(string searchName)
         {
-            return _parser.GetSchedulesFor(searchName);
+            return _parser.GetScheduleStaffWeekFor(searchName);
         }
 
-        public IEnumerable<Schedule> GetSchedulesForAll()
+        public ScheduleWeek GetScheduleWeekForAll()
         {
-            return _parser.GetSchedulesForAll();
+            return _parser.GetScheduleWeekForAll();
         }
 
-        public void SetParser(Func<ScheduleParserFactory, IScheduleParser> func)
+        public void SetParser(Func<IScheduleParserFactory, IScheduleParser> func)
         {
             _parser = func.Invoke(_factory);
         }
