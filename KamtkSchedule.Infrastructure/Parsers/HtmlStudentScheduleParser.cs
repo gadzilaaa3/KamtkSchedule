@@ -15,15 +15,12 @@ namespace KamtkSchedule.Infrastructure.Parsers
         /// <exception cref="UriFormatException"></exception>
         /// <exception cref="WebException"></exception>
         /// <exception cref="InvalidHtmlResourceException"></exception>
-        public HtmlStudentScheduleParser(string url, CollegeBuilding building) : base(url, building) {
-            Role = StaffRole.Student;
-        }
+        public HtmlStudentScheduleParser(string url, CollegeBuilding building) : base(url, building) 
+        { }
 
         public HtmlStudentScheduleParser(HtmlNodeCollection mainNodeCollection, 
             CollegeBuilding building) 
             : base(mainNodeCollection, building) 
-        {
-            Role = StaffRole.Student;
-        }
+        { }
     }
 }

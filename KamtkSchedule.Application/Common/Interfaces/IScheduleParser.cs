@@ -1,11 +1,11 @@
-﻿using KamtkSchedule.Domain.Entities;
+﻿using KamtkSchedule.Domain.Dtos.Parsers;
 
 namespace KamtkSchedule.Application.Common.Interfaces
 {
     public interface IScheduleParser
     {
-        public ScheduleStaffWeek GetScheduleStaffWeekFor(string searchName);
+        public GroupScheduleDto GetGroupSchedule(string searchName);
 
-        public ScheduleWeek GetScheduleWeekForAll();
+        public WeeklyScheduleDto GetWeeklySchedule();
     }
 }
