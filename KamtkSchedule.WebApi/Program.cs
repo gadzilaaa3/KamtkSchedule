@@ -38,6 +38,17 @@ namespace KamtkSchedule.WebApi
         internal static void AddWebApiServices(
             this IServiceCollection services)
         {
+            services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAll", builder =>
+                {
+                    builder
+                        .AllowAnyHeader()
+                        .AllowAnyMethod()
+                        .AllowAnyOrigin();
+                });
+            });
+
             services.AddControllers(options =>
             {
                 options.Conventions.Add(new RouteTokenTransformerConvention(
@@ -50,19 +61,6 @@ namespace KamtkSchedule.WebApi
                     = opts.PropertyNamingPolicy;
                 options.JsonSerializerOptions.WriteIndented 
                     = opts.WriteIndented;
-            });
-
-
-
-            services.AddCors(options =>
-            {
-                options.AddPolicy("AllowAll", builder =>
-                {
-                    builder
-                        .AllowAnyHeader()
-                        .AllowAnyMethod()
-                        .AllowAnyOrigin();
-                });
             });
 
             services.AddEndpointsApiExplorer();
@@ -89,7 +87,7 @@ namespace KamtkSchedule.WebApi
                 c.EnableAnnotations();
             });
 
-            //Quarts
+            // Quarts
             services.AddQuartz(q =>
             {
                 var updateSchedulesJobKey = UpdateSchedulesJob.Key;
@@ -118,6 +116,7 @@ namespace KamtkSchedule.WebApi
             }
 
             app.UseHttpsRedirection();
+            app.UseCors("AllowAll");
             app.UseAuthorization();
             app.MapControllers();
         }
